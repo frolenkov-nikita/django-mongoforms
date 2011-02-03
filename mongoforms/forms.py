@@ -24,7 +24,7 @@ class MongoFormMetaClass(type):
 
         # add the fields as "our" base fields
         attrs['base_fields'] = SortedDict(fields)
-        
+
         # Meta class available?
         if 'Meta' in attrs and hasattr(attrs['Meta'], 'document') and \
            issubclass(attrs['Meta'].document, BaseDocument):
@@ -38,7 +38,8 @@ class MongoFormMetaClass(type):
                 # add field and override clean method to respect mongoengine-validator
                 doc_fields[field_name] = formfield_generator.generate(field_name, field)
                 doc_fields[field_name].clean = mongoengine_validate_wrapper(
-                    doc_fields[field_name].clean, field._validate)
+                    doc_fields[field_name].clean, field._validate,
+                    doc_fields[field_name])
 
             # write the new document fields to base_fields
             doc_fields.update(attrs['base_fields'])
@@ -82,7 +83,10 @@ class MongoForm(forms.BaseForm):
                 if isinstance(self._meta.document._fields[field_name], ReferenceField):
                     # field data could be None for not populated refs
                     field_data = field_data and str(field_data.id)
-                object_data[field_name] = field_data
+                    object_data[field_name] = field_data
+                # and couldn't be None for non-reference fields
+                elif field_data:
+                    object_data[field_name] = field_data
 
         # additional initial data available?
         if initial is not None:
